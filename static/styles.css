@@ -1,0 +1,29 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+header {
+  background-color: #004080;
+  color: white;
+  padding: 10px;
+}
+nav a {
+  color: white;
+  margin-right: 15px;
+  text-decoration: none;
+}
+.user-info {
+  font-size: 0.9em;
+  margin-top: 5px;
+}
+main {
+  padding: 20px;
+  min-height: 80vh;
+}
+footer {
+  background-color: #ddd;
+  text-align: center;
+  padding: 10px;
+}
