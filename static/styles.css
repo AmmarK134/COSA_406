@@ -22,6 +22,15 @@ main {
   padding: 20px;
   min-height: 80vh;
 }
+.flashes {
+  list-style-type: none;
+  padding: 0;
+}
+.flashes li {
+  background-color: #ffcc00;
+  margin-bottom: 10px;
+  padding: 10px;
+}
 footer {
   background-color: #ddd;
   text-align: center;
