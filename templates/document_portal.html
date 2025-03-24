@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<script src="documentScript.js"></script>
+<div id="submitBox">
+    <form method="POST" enctype="multipart/form-data">
+        <h1>Submit a valid PDF file</h1>
+        <input type="file" name="document" id="document"><br><br>
+        <input type="submit" name="submit" id="submit"><br><br>
+    </form>
+</div>
+{% endblock %}
