@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Add Job Posting{% endblock %}
+{% block content %}
+<h1>Add Job Posting </h1>
+<h2>Fill in the details for the new job posting</h2>
+
+<!-- Form for adding a new job posting -->
+<form action="#" method="POST">
+    <label for="job_title">Job Title:</label>
+    <input type="text" id="job_title" name="job_title" required>
+    <br><br>
+
+    <label for="job_description">Job Description:</label>
+    <textarea id="job_description" name="job_description" rows="4" cols="50" required></textarea>
+    <br><br>
+
+    <label for="job_location">Location:</label>
+    <input type="text" id="job_location" name="job_location" required>
+    <br><br>
+
+    <label for="job_type">Job Type:</label>
+    <select id="job_type" name="job_type" required>
+        <option value="full_time">Full-Time</option>
+        <option value="part_time">Part-Time</option>
+        <option value="remote">Remote</option>
+    </select>
+    <br><br>
+
+    <label for="application_deadline">Application Deadline:</label>
+    <input type="date" id="application_deadline" name="application_deadline" required>
+    <br><br>
+
+    <button type="submit">Add Job Posting</button>
+</form>
+{% endblock %}

@@ -174,6 +174,10 @@ def dashboard():
 def student_dashboard():
     return render_template("student_dashboard.html")
 
+@app.route('/upload_report')
+def upload_report():
+    return render_template('upload_report.html')
+
 @app.route('/dashboard/coordinator')
 def coordinator_dashboard():
     applications = Application.query.all()
@@ -183,7 +187,9 @@ def coordinator_dashboard():
 def employer_dashboard():
     job_postings = JobPosting.query.filter_by(employer_id=session.get('user_id')).all()
     return render_template('employer_dashboard.html', job_postings=job_postings)
-
+@app.route('/add_job')
+def add_job():
+    return render_template('add_job.html')
 @app.route('/dashboard/admin')
 def admin_dashboard():
     users = User.query.all()
