@@ -6,4 +6,21 @@
     <li><a href="{{ url_for('add_job') }}">Add New Job Posting</a></li>
     <li><a href="#">Submit Evaluation</a></li>
   </ul>
+
+  {% if job_postings %}
+    <h3>Your Job Postings</h3>
+    <ul>
+      {% for job in job_postings %}
+        <li>
+          <strong>{{ job.title }}</strong><br>
+          {{ job.description }}<br>
+          Location: {{ job.location }}<br>
+          Type: {{ job.job_type }}<br>
+            Deadline: {{ job.deadline.strftime("%Y-%m-%d") }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No job postings available.</p>
+  {% endif %}
 {% endblock %}
