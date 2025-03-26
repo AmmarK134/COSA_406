@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cosa.db'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 db = SQLAlchemy(app)
 
@@ -40,12 +41,13 @@ class Application(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(50), default='submitted')
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 class JobPosting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    location = db.Column(db.String(200), nullable=False)
+    job_type = db.Column(db.String(50), nullable=False)
     deadline = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -80,7 +82,8 @@ class Interview(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-    
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
     
 @app.route('/')
 def index():
@@ -174,10 +177,6 @@ def dashboard():
 def student_dashboard():
     return render_template("student_dashboard.html")
 
-@app.route('/upload_report')
-def upload_report():
-    return render_template('upload_report.html')
-
 @app.route('/dashboard/coordinator')
 def coordinator_dashboard():
     applications = Application.query.all()
@@ -187,9 +186,7 @@ def coordinator_dashboard():
 def employer_dashboard():
     job_postings = JobPosting.query.filter_by(employer_id=session.get('user_id')).all()
     return render_template('employer_dashboard.html', job_postings=job_postings)
-@app.route('/add_job')
-def add_job():
-    return render_template('add_job.html')
+
 @app.route('/dashboard/admin')
 def admin_dashboard():
     users = User.query.all()
@@ -199,6 +196,89 @@ def admin_dashboard():
 @app.route('/faq')
 def faq():
     return render_template('faq.html')
+
+
+@app.route('/add_job', methods=['GET', 'POST'])
+def add_job():
+    if 'user_id' not in session or session.get('role') != 'employer':
+        flash("Access denied.")
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        title = request.form.get('job_title')
+        description = request.form.get('job_description')
+        location = request.form.get('job_location')
+        job_type = request.form.get('job_type')
+        deadline_str = request.form.get('application_deadline')
+        try:
+            deadline = datetime.strptime(deadline_str, '%Y-%m-%d')
+        except ValueError:
+            flash("Invalid deadline format. Please use YYYY-MM-DD.")
+            return redirect(request.url)
+        job = JobPosting(
+            employer_id=session['user_id'],
+            title=title,
+            description=description,
+            location=location,
+            job_type=job_type,
+            deadline=deadline
+        )
+        db.session.add(job)
+        db.session.commit()
+        flash("Job posting added successfully.")
+        return redirect(url_for('employer_dashboard'))
+    return render_template('add_job.html')
+
+@app.route('/upload_report', methods=['GET', 'POST'])
+def upload_report():
+    if 'user_id' not in session or session.get('role') != 'student':
+        flash("Access denied.")
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash("No file found.")
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash("No file selected.")
+            return redirect(request.url)
+        if file and file.filename.lower().endswith('.pdf'):
+            filename = file.filename
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            report = Report(student_id=session['user_id'], pdf_filename=filename)
+            db.session.add(report)
+            db.session.commit()
+            flash("Work term report uploaded successfully.")
+            return redirect(url_for('student_dashboard'))
+        else:
+            flash("Only PDF files are allowed for reports.")
+            return redirect(request.url)
+    return render_template('upload_report.html')
+
+@app.route('/document_portal', methods=['GET', 'POST'])
+def document_portal():
+    if 'user_id' not in session:
+        flash("Please login first.")
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        if 'document' not in request.files:
+            flash("No file part.")
+            return redirect(request.url)
+        file = request.files['document']
+        if file.filename == '':
+            flash("No file selected.")
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            file.save(filepath)
+            flash("Document uploaded successfully.")
+            return redirect(url_for('dashboard'))
+        else:
+            flash("Invalid file type.")
+            return redirect(request.url)
+    return render_template('document_portal.html')
 
 
 if __name__ == '__main__':
