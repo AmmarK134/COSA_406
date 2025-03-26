@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Review Applications{% endblock %}
+{% block content %}
+<h2>Review Student Applications</h2>
+<form method="POST" enctype="text/plain">
+    <label for="name">Enter student name: </label><br><br>
+    <input type="text" name="name" id="name"><br><br>
+    <label for="email">Enter student email: </label><br><br>
+    <input type="text" name="email" id="email"><br><br>
+    <label for="id">Enter student ID: </label><br><br>
+    <input type="text" name="id" id="id"><br><br>
+</form>
+{% endblock %}
