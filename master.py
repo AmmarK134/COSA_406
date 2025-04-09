@@ -41,7 +41,7 @@ class Application(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(50), default='submitted')
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
 class JobPosting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -81,7 +81,6 @@ class Interview(db.Model):
     scheduled_time = db.Column(db.DateTime, nullable=False)
     message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
