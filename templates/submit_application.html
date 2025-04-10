@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Co-op Application{% endblock %}
+{% block content %}
+<form method="POST">
+    <label for="fullname">Full Name: </label>
+    <input type="text" name="fullname" id="fullname"><br><br>
+
+    <label for="al1">Address Line 1: </label>
+    <input type="text" name="addressline1" id="al1"><br><br>
+
+    <label for="al2">Address Line 2: </label>
+    <input type="text" name="addressline2" id="al2"><br><br>
+
+    <label for="dob">Date Of Birth: </label>
+    <input type="date" name="dob" id="dob"><br><br>
+
+    <label for="studentnum">Student Number: </label>
+    <input type="text" name="studentnum" id="studentnum"><br><br>
+
+    <label for="level">Student Year: </label>
+    <input type="number" name="level" id="level"><br><br>
+
+    <label for="linkedin">LinkedIn Profile: </label>
+    <input type="text" name="linkedin" id="linkedin"><br><br>
+
+    <label for="submit"></label>
+    <input type="Submit" name="submit" id="submit"><br><br>
+</form>
+{% endblock %}

@@ -61,6 +61,7 @@ class Application(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(50), default='submitted')
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class JobPosting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -100,7 +101,6 @@ class Interview(db.Model):
     scheduled_time = db.Column(db.DateTime, nullable=False)
     message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -349,6 +349,13 @@ def document_portal():
             return redirect(request.url)
     return render_template('document_portal.html')
 
+@app.route('/application_status', methods=['GET', 'POST'])
+def application_status():
+    return render_template('application_status.html')
+
+@app.route('/submit_application', methods=['GET', 'POST'])
+def submit_application():
+    return render_template('submit_application.html')
 
 if __name__ == '__main__':
     with app.app_context():
