@@ -10,4 +10,10 @@
     <label for="id">Enter student ID: </label><br><br>
     <input type="text" name="id" id="id"><br><br>
 </form>
+<ul>
+    <li>Name: {{ data.fullname }}</li><br>
+    <li>Year In Program: {{ data.student_year }}</li><br>
+    <li>Student #: {{ data.student_number }}</li><br>
+    <li>Application Status: {{ data.status }}</li><br>
+</ul>
 {% endblock %}

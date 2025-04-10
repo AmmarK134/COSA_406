@@ -109,6 +109,7 @@ class CoopApplication(db.Model):
     student_number = db.Column(db.Text, primary_key=True)
     student_year = db.Column(db.Integer)
     linkedin = db.Column(db.Text, nullable=False)
+    status = db.Column(db.Text, nullable=False)
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -374,11 +375,18 @@ def submit_application():
             dob=dob,
             student_number=studentnum,
             student_year=studentyear,
-            linkedin=linkedin
+            linkedin=linkedin,
+            status="Under Review"
         )
         db.session.add(application)
         db.session.commit()
     return render_template('submit_application.html')
+
+@app.route('/application_review', methods=['GET', 'POST'])
+def application_review():
+    if request.method == 'POST':
+        applicant_data = CoopApplication.query.all()
+        return render_template('application_review.html')
 
 if __name__ == '__main__':
     with app.app_context():
