@@ -102,6 +102,14 @@ class Interview(db.Model):
     message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class CoopApplication(db.Model):
+    full_name = db.Column(db.Text)
+    address = db.Column(db.Text)
+    dob = db.Column(db.Text)
+    student_number = db.Column(db.Text, primary_key=True)
+    student_year = db.Column(db.Integer)
+    linkedin = db.Column(db.Text, nullable=False)
+
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
     
@@ -349,6 +357,27 @@ def application_status():
 
 @app.route('/submit_application', methods=['GET', 'POST'])
 def submit_application():
+    if request.method == 'POST':
+        fullname = request.form.get('fullname')
+        address_line1 = request.form.get('addressline1')
+        address_line2 = request.form.get('addressline2')
+        dob = request.form.get('dob')
+        studentnum = request.form.get('studentnum')
+        studentyear = request.form.get('level')
+        linkedin = request.form.get('linkedin')
+        if any(list(filter(lambda x: not x.isalpha(), [fullname, address_line1, address_line2, dob, studentnum, studentyear]))):
+            flash('One or more fields are missing required responses')
+            return redirect(url_for('submit_application'))
+        application = CoopApplication(
+            fullname=fullname,
+            address="{} {}".format(address_line1, address_line2),
+            dob=dob,
+            student_number=studentnum,
+            student_year=studentyear,
+            linkedin=linkedin
+        )
+        db.session.add(application)
+        db.session.commit()
     return render_template('submit_application.html')
 
 if __name__ == '__main__':
