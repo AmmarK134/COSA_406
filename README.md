@@ -8,3 +8,5 @@ Before running the code, please ensure you have installed the following:
 - Flask: pip install Flask
 - Requests: pip install requests
 - SQLAlchemy: pip install SQLAlchemy
+- pyotp: pip install pyotp
+- qrcode: pip install qrcode

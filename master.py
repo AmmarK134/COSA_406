@@ -1,16 +1,18 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-
-
+import pyotp
+import qrcode
+from io import BytesIO
+import base64
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cosa.db'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 db = SQLAlchemy(app)
 
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
@@ -28,13 +30,31 @@ class User(db.Model):
     student_id = db.Column(db.String(50))
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    two_factor_code = db.Column(db.String(6))
-    two_factor_expires = db.Column(db.DateTime)
+    two_factor_secret = db.Column(db.String(32))
+    two_factor_enabled = db.Column(db.Boolean, default=False)
+    two_factor_initiated = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def generate_two_factor_secret(self):
+        if not self.two_factor_secret:
+            self.two_factor_secret = pyotp.random_base32()
+        return self.two_factor_secret
+        
+    def get_two_factor_uri(self):
+        if not self.two_factor_secret:
+            self.generate_two_factor_secret()
+        totp = pyotp.TOTP(self.two_factor_secret)
+        return totp.provisioning_uri(self.email, issuer_name="COSA")
+        
+    def verify_two_factor(self, code):
+        if not self.two_factor_secret:
+            return False
+        totp = pyotp.TOTP(self.two_factor_secret)
+        return totp.verify(code)
 
 class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -100,11 +120,16 @@ def register(role):
         name = request.form.get('name', '')
         student_id_val = request.form.get('student_id', None) if role == 'student' else None
         password = request.form['password']
+        enable_2fa = request.form.get('enable_2fa') == 'on'
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("User with that username or email already exists.")
             return redirect(url_for('register', role=role))
         user = User(username=username, email=email, name=name, role=role, student_id=student_id_val)
         user.set_password(password)
+        user.two_factor_enabled = enable_2fa
+        if enable_2fa:
+            user.generate_two_factor_secret()
+            user.two_factor_initiated = False
         db.session.add(user)
         db.session.commit()
         flash("Registration successful. Please login.")
@@ -118,12 +143,9 @@ def login():
         password = request.form['password']
         user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
         if user and user.check_password(password):
-            code = 'test'
-            user.two_factor_code = code
-            user.two_factor_expires = datetime.utcnow() + timedelta(minutes=5)
-            db.session.commit()
             session['temp_user_id'] = user.id
-            flash("Verification code sent (simulation).")
+            if not user.two_factor_enabled:
+                return redirect(url_for('two_factor'))
             return redirect(url_for('two_factor'))
         else:
             flash("Invalid credentials. Please try again.")
@@ -134,10 +156,50 @@ def two_factor():
     if 'temp_user_id' not in session:
         flash("Session expired. Please login again.")
         return redirect(url_for('login'))
+    
     user = User.query.get(session['temp_user_id'])
+    if not user:
+        flash("User not found.")
+        return redirect(url_for('login'))
+    
+    if not user.two_factor_enabled:
+        session.pop('temp_user_id', None)
+        session['user_id'] = user.id
+        session['role'] = user.role
+        session['username'] = user.username
+        flash("Two-factor authentication is disabled. Logged in without verification.")
+        return redirect(url_for('dashboard'))
+    
+    if not user.two_factor_initiated:
+   
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(user.get_two_factor_uri())
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        qr_code = base64.b64encode(buffered.getvalue()).decode()
+        
+        if request.method == 'POST':
+            code = request.form.get('code')
+            if user.verify_two_factor(code):
+                user.two_factor_initiated = True  # Mark the setup complete
+                db.session.commit()
+                session.pop('temp_user_id', None)
+                session['user_id'] = user.id
+                session['role'] = user.role
+                session['username'] = user.username
+                flash("Two-factor authentication setup and verification successful.")
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Invalid verification code. Please try again.")
+        return render_template('2fa.html', qr_code=qr_code, setup_mode=True)
+    
+    # For users who have already completed 2FA setup.
     if request.method == 'POST':
-        code = request.form['code']
-        if user.two_factor_code == code and datetime.utcnow() < user.two_factor_expires:
+        code = request.form.get('code')
+        if user.verify_two_factor(code):
             session.pop('temp_user_id', None)
             session['user_id'] = user.id
             session['role'] = user.role
@@ -145,9 +207,10 @@ def two_factor():
             flash("Two-factor authentication successful.")
             return redirect(url_for('dashboard'))
         else:
-            flash("Invalid or expired verification code.")
-            return redirect(url_for('login'))
-    return render_template('2fa.html')
+            flash("Invalid verification code.")
+            return redirect(url_for('two_factor'))
+    
+    return render_template('2fa.html', setup_mode=False)
 
 @app.route('/logout')
 def logout():
@@ -228,6 +291,12 @@ def add_job():
         return redirect(url_for('employer_dashboard'))
     return render_template('add_job.html')
 
+@app.route('/application_status', methods=['GET', 'POST'])
+def application_status():
+    if 'user_id' not in session or session.get('role') != 'student':
+        flash("Access denied.")
+        return redirect(url_for('login'))
+        
 @app.route('/upload_report', methods=['GET', 'POST'])
 def upload_report():
     if 'user_id' not in session or session.get('role') != 'student':
@@ -283,5 +352,23 @@ def document_portal():
 
 if __name__ == '__main__':
     with app.app_context():
+        db.drop_all()
         db.create_all()
+        
+        default_password = "password"
+        
+        default_users = [
+            ('student', 'student', 'student@example.com', 'Student Name'),
+            ('coordinator', 'coordinator', 'coordinator@example.com', 'Coordinator Name'),
+            ('employer', 'employer', 'employer@example.com', 'Employer Name'),
+            ('admin', 'admin', 'admin@example.com', 'Admin Name')
+        ]
+        
+        for role, username, email, name in default_users:
+            user = User(role=role, username=username, email=email, name=name)
+            user.set_password(default_password)
+            user.two_factor_enabled = False
+            db.session.add(user)
+        
+        db.session.commit()
     app.run(debug=True)

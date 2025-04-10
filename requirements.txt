@@ -2,3 +2,6 @@ Flask
 requests
 flask_sqlalchemy
 werkzeug
+pyotp
+qrcode
+Pillow

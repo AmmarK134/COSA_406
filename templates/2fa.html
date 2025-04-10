@@ -2,10 +2,62 @@
 {% block title %}Two-Factor Authentication{% endblock %}
 {% block content %}
   <h2>Two-Factor Authentication</h2>
-  <p>A verification code has been sent to your email (simulation).</p>
+  
+  {% if setup_mode %}
+    <div class="setup-instructions">
+      <h3>First Time Setup</h3>
+      <p>Please follow these steps to set up two-factor authentication:</p>
+      <ol>
+        <li>Install an authenticator app on your phone (like Google Authenticator or Authy)</li>
+        <li>Scan the QR code below with your authenticator app</li>
+        <li>Enter the 6-digit code shown in your authenticator app</li>
+      </ol>
+      <div class="qr-code">
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+      </div>
+    </div>
+  {% else %}
+    <p>Enter the 6-digit code from your authenticator app:</p>
+  {% endif %}
+  
   <form method="POST">
-    <label for="code">Enter Verification Code:</label>
-    <input type="text" name="code" required><br>
+    <label for="code">Verification Code:</label>
+    <input type="text" name="code" pattern="[0-9]{6}" maxlength="6" required><br>
     <button type="submit">Verify</button>
   </form>
+{% endblock %}
+
+{% block styles %}
+<style>
+.setup-instructions {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.qr-code {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.qr-code img {
+  max-width: 200px;
+  height: auto;
+}
+
+form {
+  max-width: 300px;
+  margin: 20px auto;
+}
+
+input[type="text"] {
+  width: 120px;
+  font-size: 18px;
+  letter-spacing: 4px;
+  text-align: center;
+}
+</style>
 {% endblock %}
