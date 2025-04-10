@@ -290,12 +290,6 @@ def add_job():
         flash("Job posting added successfully.")
         return redirect(url_for('employer_dashboard'))
     return render_template('add_job.html')
-
-@app.route('/application_status', methods=['GET', 'POST'])
-def application_status():
-    if 'user_id' not in session or session.get('role') != 'student':
-        flash("Access denied.")
-        return redirect(url_for('login'))
         
 @app.route('/upload_report', methods=['GET', 'POST'])
 def upload_report():
