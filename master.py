@@ -33,6 +33,7 @@ class User(db.Model):
     two_factor_secret = db.Column(db.String(32))
     two_factor_enabled = db.Column(db.Boolean, default=False)
     two_factor_initiated = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -151,10 +152,20 @@ def login():
         username_or_email = request.form['username']
         password = request.form['password']
         user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
+        
         if user and user.check_password(password):
+            if not user.is_active:
+                flash("Your account has been deactivated. Please contact an administrator.")
+                return redirect(url_for('login'))
+                
             session['temp_user_id'] = user.id
             if not user.two_factor_enabled:
-                return redirect(url_for('two_factor'))
+                session.pop('temp_user_id', None)
+                session['user_id'] = user.id
+                session['role'] = user.role
+                session['username'] = user.username
+                flash("Login successful.")
+                return redirect(url_for('dashboard'))
             return redirect(url_for('two_factor'))
         else:
             flash("Invalid credentials. Please try again.")
@@ -227,11 +238,29 @@ def logout():
     flash("Logged out successfully.")
     return redirect(url_for('index'))
 
+def check_active_user():
+    if 'user_id' not in session:
+        return False
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_active:
+        session.clear()
+        flash("Your account has been deactivated. Please contact an administrator.")
+        return False
+    return True
+
+@app.before_request
+def check_user_status():
+    if request.endpoint and request.endpoint != 'static':
+        excluded_routes = ['login', 'logout', 'index', 'register']
+        if request.endpoint not in excluded_routes and 'user_id' in session:
+            if not check_active_user():
+                return redirect(url_for('login'))
+
 @app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session:
-        flash("Please login first.")
+    if not check_active_user():
         return redirect(url_for('login'))
+    
     role = session.get('role')
     if role == 'student':
         return redirect(url_for('student_dashboard'))
@@ -271,7 +300,10 @@ def faq():
 
 @app.route('/manage_user', methods=['GET', 'POST'])
 def manage_user():
-    if 'user_id' not in session or session.get('role') != 'admin':
+    if not check_active_user():
+        return redirect(url_for('login'))
+        
+    if session.get('role') != 'admin':
         flash("Access denied.")
         return redirect(url_for('login'))
     if request.method == 'POST':
@@ -289,6 +321,36 @@ def manage_user():
     users = User.query.all()
     return render_template('manage_user.html', users=users)
 
+@app.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+def edit_user(user_id):
+    if not check_active_user():
+        return redirect(url_for('login'))
+        
+    if session.get('role') != 'admin':
+        flash("Access denied.")
+        return redirect(url_for('login'))
+        
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'activate':
+            user.is_active = True
+            flash(f"User {user.username} has been activated.")
+        elif action == 'deactivate':
+            user.is_active = False
+            flash(f"User {user.username} has been deactivated.")
+        elif action == 'edit':
+            user.role = request.form.get('role')
+            user.name = request.form.get('name')
+            user.email = request.form.get('email')
+            flash(f"User {user.username} has been updated.")
+            
+        db.session.commit()
+        return redirect(url_for('manage_user'))
+        
+    return render_template('edit_user.html', user=user)
 
 @app.route('/add_job', methods=['GET', 'POST'])
 def add_job():
@@ -322,13 +384,18 @@ def add_job():
         
 @app.route('/upload_report', methods=['GET', 'POST'])
 def upload_report():
-    if 'user_id' not in session or session.get('role') != 'student':
+    if not check_active_user():
+        return redirect(url_for('login'))
+        
+    if session.get('role') != 'student':
         flash("Access denied.")
         return redirect(url_for('login'))
+        
     if request.method == 'POST':
         if 'file' not in request.files:
             flash("No file found.")
             return redirect(request.url)
+            
         file = request.files['file']
         report_type = request.form.get('reportType')
         
@@ -341,11 +408,11 @@ def upload_report():
             return redirect(request.url)
             
         if file and file.filename.lower().endswith('.pdf'):
-            ext = file.filename.rsplit('.', 1)[1].lower()
-            unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            
             try:
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                
                 file.save(filepath)
                 report = Report(
                     student_id=session['user_id'], 
@@ -357,11 +424,12 @@ def upload_report():
                 flash("Work term report uploaded successfully.")
                 return redirect(url_for('student_dashboard'))
             except Exception as e:
-                flash("Error uploading file. Please try again.")
+                flash(f"Error uploading file: {str(e)}")
                 return redirect(request.url)
         else:
             flash("Only PDF files are allowed for reports.")
             return redirect(request.url)
+            
     return render_template('upload_report.html')
 
 @app.route('/document_portal', methods=['GET', 'POST'])
