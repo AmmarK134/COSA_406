@@ -269,6 +269,26 @@ def admin_dashboard():
 def faq():
     return render_template('faq.html')
 
+@app.route('/manage_user', methods=['GET', 'POST'])
+def manage_user():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        flash("Access denied.")
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        action = request.form.get('action')
+        user = User.query.get(user_id)
+        if action == 'delete' and user:
+            db.session.delete(user)
+            db.session.commit()
+            flash("User deleted successfully.")
+        elif action == 'edit' and user:
+            user.role = request.form.get('role')
+            db.session.commit()
+            flash("User role updated successfully.")
+    users = User.query.all()
+    return render_template('manage_user.html', users=users)
+
 
 @app.route('/add_job', methods=['GET', 'POST'])
 def add_job():
