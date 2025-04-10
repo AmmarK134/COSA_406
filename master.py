@@ -85,6 +85,7 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     pdf_filename = db.Column(db.String(200))
+    report_type = db.Column(db.String(50), nullable=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Message(db.Model):
@@ -309,18 +310,35 @@ def upload_report():
             flash("No file found.")
             return redirect(request.url)
         file = request.files['file']
+        report_type = request.form.get('reportType')
+        
         if file.filename == '':
             flash("No file selected.")
             return redirect(request.url)
+            
+        if not report_type:
+            flash("Please select a report type.")
+            return redirect(request.url)
+            
         if file and file.filename.lower().endswith('.pdf'):
-            filename = file.filename
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            report = Report(student_id=session['user_id'], pdf_filename=filename)
-            db.session.add(report)
-            db.session.commit()
-            flash("Work term report uploaded successfully.")
-            return redirect(url_for('student_dashboard'))
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            try:
+                file.save(filepath)
+                report = Report(
+                    student_id=session['user_id'], 
+                    pdf_filename=unique_filename,
+                    report_type=report_type
+                )
+                db.session.add(report)
+                db.session.commit()
+                flash("Work term report uploaded successfully.")
+                return redirect(url_for('student_dashboard'))
+            except Exception as e:
+                flash("Error uploading file. Please try again.")
+                return redirect(request.url)
         else:
             flash("Only PDF files are allowed for reports.")
             return redirect(request.url)
