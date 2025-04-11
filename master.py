@@ -146,25 +146,29 @@ def register(role):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        username_or_email = request.form['username']
-        password = request.form['password']
-        user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
-        
+    if request.method == "POST":
+        username_or_email = request.form["username"]
+        password = request.form["password"]
+        user = User.query.filter(
+            (User.username == username_or_email) | (User.email == username_or_email)
+        ).first()
+
         if user and user.check_password(password):
             if not user.is_active:
-                flash("Your account has been deactivated. Please contact an administrator.")
-                return redirect(url_for('login'))
-                
-            session['temp_user_id'] = user.id
+                flash(
+                    "Your account has been deactivated. Please contact an administrator."
+                )
+                return redirect(url_for("login"))
+
+            session["temp_user_id"] = user.id
             if not user.two_factor_enabled:
-                session.pop('temp_user_id', None)
-                session['user_id'] = user.id
-                session['role'] = user.role
-                session['username'] = user.username
+                session.pop("temp_user_id", None)
+                session["user_id"] = user.id
+                session["role"] = user.role
+                session["username"] = user.username
                 flash("Login successful.")
-                return redirect(url_for('dashboard'))
-            return redirect(url_for('two_factor'))
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("two_factor"))
         else:
             flash("Invalid credentials. Please try again.")
     return render_template("login.html")
@@ -239,37 +243,39 @@ def logout():
 
 
 def check_active_user():
-    if 'user_id' not in session:
+    if "user_id" not in session:
         return False
-    user = User.query.get(session['user_id'])
+    user = User.query.get(session["user_id"])
     if not user or not user.is_active:
         session.clear()
         flash("Your account has been deactivated. Please contact an administrator.")
         return False
     return True
 
+
 @app.before_request
 def check_user_status():
-    if request.endpoint and request.endpoint != 'static':
-        excluded_routes = ['login', 'logout', 'index', 'register']
-        if request.endpoint not in excluded_routes and 'user_id' in session:
+    if request.endpoint and request.endpoint != "static":
+        excluded_routes = ["login", "logout", "index", "register"]
+        if request.endpoint not in excluded_routes and "user_id" in session:
             if not check_active_user():
-                return redirect(url_for('login'))
+                return redirect(url_for("login"))
 
-@app.route('/dashboard')
+
+@app.route("/dashboard")
 def dashboard():
     if not check_active_user():
-        return redirect(url_for('login'))
-    
-    role = session.get('role')
-    if role == 'student':
-        return redirect(url_for('student_dashboard'))
-    elif role == 'coordinator':
-        return redirect(url_for('coordinator_dashboard'))
-    elif role == 'employer':
-        return redirect(url_for('employer_dashboard'))
-    elif role == 'admin':
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for("login"))
+
+    role = session.get("role")
+    if role == "student":
+        return redirect(url_for("student_dashboard"))
+    elif role == "coordinator":
+        return redirect(url_for("coordinator_dashboard"))
+    elif role == "employer":
+        return redirect(url_for("employer_dashboard"))
+    elif role == "admin":
+        return redirect(url_for("admin_dashboard"))
     else:
         flash("Invalid user role.")
         return redirect(url_for("index"))
@@ -301,71 +307,74 @@ def admin_dashboard():
 def faq():
     return render_template("faq.html")
 
-@app.route('/manage_user', methods=['GET', 'POST'])
+
+@app.route("/manage_user", methods=["GET", "POST"])
 def manage_user():
     if not check_active_user():
-        return redirect(url_for('login'))
-        
-    if session.get('role') != 'admin':
+        return redirect(url_for("login"))
+
+    if session.get("role") != "admin":
         flash("Access denied.")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        user_id = request.form.get('user_id')
-        action = request.form.get('action')
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        user_id = request.form.get("user_id")
+        action = request.form.get("action")
         user = User.query.get(user_id)
-        if action == 'delete' and user:
+        if action == "delete" and user:
             db.session.delete(user)
             db.session.commit()
             flash("User deleted successfully.")
-        elif action == 'edit' and user:
-            user.role = request.form.get('role')
+        elif action == "edit" and user:
+            user.role = request.form.get("role")
             db.session.commit()
             flash("User role updated successfully.")
     users = User.query.all()
-    return render_template('manage_user.html', users=users)
+    return render_template("manage_user.html", users=users)
 
-@app.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+
+@app.route("/edit_user/<int:user_id>", methods=["GET", "POST"])
 def edit_user(user_id):
     if not check_active_user():
-        return redirect(url_for('login'))
-        
-    if session.get('role') != 'admin':
+        return redirect(url_for("login"))
+
+    if session.get("role") != "admin":
         flash("Access denied.")
-        return redirect(url_for('login'))
-        
+        return redirect(url_for("login"))
+
     user = User.query.get_or_404(user_id)
-    
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'activate':
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "activate":
             user.is_active = True
             flash(f"User {user.username} has been activated.")
-        elif action == 'deactivate':
+        elif action == "deactivate":
             user.is_active = False
             flash(f"User {user.username} has been deactivated.")
-        elif action == 'edit':
-            user.role = request.form.get('role')
-            user.name = request.form.get('name')
-            user.email = request.form.get('email')
+        elif action == "edit":
+            user.role = request.form.get("role")
+            user.name = request.form.get("name")
+            user.email = request.form.get("email")
             flash(f"User {user.username} has been updated.")
-            
-        db.session.commit()
-        return redirect(url_for('manage_user'))
-        
-    return render_template('edit_user.html', user=user)
 
-@app.route('/add_job', methods=['GET', 'POST'])
+        db.session.commit()
+        return redirect(url_for("manage_user"))
+
+    return render_template("edit_user.html", user=user)
+
+
+@app.route("/add_job", methods=["GET", "POST"])
 def add_job():
-    if 'user_id' not in session or session.get('role') != 'employer':
+    if "user_id" not in session or session.get("role") != "employer":
         flash("Access denied.")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        title = request.form.get('job_title')
-        description = request.form.get('job_description')
-        location = request.form.get('job_location')
-        job_type = request.form.get('job_type')
-        deadline_str = request.form.get('application_deadline')
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        title = request.form.get("job_title")
+        description = request.form.get("job_description")
+        location = request.form.get("job_location")
+        job_type = request.form.get("job_type")
+        deadline_str = request.form.get("application_deadline")
         try:
             deadline = datetime.strptime(deadline_str, "%Y-%m-%d")
         except ValueError:
@@ -389,52 +398,55 @@ def add_job():
 @app.route("/upload_report", methods=["GET", "POST"])
 def upload_report():
     if not check_active_user():
-        return redirect(url_for('login'))
-        
-    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+
+    if session.get("role") != "student":
         flash("Access denied.")
-        return redirect(url_for('login'))
-        
-    if request.method == 'POST':
-        if 'file' not in request.files:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        if "file" not in request.files:
             flash("No file found.")
             return redirect(request.url)
-            
-        file = request.files['file']
-        report_type = request.form.get('reportType')
-        
-        if file.filename == '':
+
+        file = request.files["file"]
+        report_type = request.form.get("reportType")
+
+        if file.filename == "":
             flash("No file selected.")
             return redirect(request.url)
-            
+
         if not report_type:
             flash("Please select a report type.")
             return redirect(request.url)
-            
-        if file and file.filename.lower().endswith('.pdf'):
+
+        if file and file.filename.lower().endswith(".pdf"):
             try:
-                ext = file.filename.rsplit('.', 1)[1].lower()
-                unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                
+                ext = file.filename.rsplit(".", 1)[1].lower()
+                unique_filename = (
+                    f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
+                )
+                filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+
                 file.save(filepath)
                 report = Report(
-                    student_id=session['user_id'], 
+                    student_id=session["user_id"],
                     pdf_filename=unique_filename,
-                    report_type=report_type
+                    report_type=report_type,
                 )
                 db.session.add(report)
                 db.session.commit()
                 flash("Work term report uploaded successfully.")
-                return redirect(url_for('student_dashboard'))
+                return redirect(url_for("student_dashboard"))
             except Exception as e:
                 flash(f"Error uploading file: {str(e)}")
                 return redirect(request.url)
         else:
             flash("Only PDF files are allowed for reports.")
             return redirect(request.url)
-            
-    return render_template('upload_report.html')
+
+    return render_template("upload_report.html")
+
 
 @app.route("/document_portal", methods=["GET", "POST"])
 def document_portal():
@@ -593,7 +605,7 @@ def accept_application(app_id):
 
 
 if __name__ == "__main__":
-    RESET_DB = 0 # Set to 1 to reset the database (for development purposes)
+    RESET_DB = 0  # Set to 1 to reset the database (for development purposes)
     with app.app_context():
         if RESET_DB:
             db.drop_all()
