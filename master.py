@@ -619,6 +619,26 @@ def reject_application(app_id):
     flash(f"Application for {application.full_name} has been rejected.")
     return redirect(url_for("application_review"))
 
+@app.route("/view_reminders", methods=["GET"])
+def view_reminders():
+    if "user_id" not in session or session.get("role") != "student":
+        flash("Access denied.")
+        return redirect(url_for("login"))
+
+    user = User.query.get(session["user_id"])
+    if not user:
+        flash("User not found.")
+        return redirect(url_for("dashboard"))
+
+
+    reminders = []
+
+    if not reminders:
+        flash("No reminders found.")
+        return redirect(url_for("dashboard"))
+
+    return render_template("view_reminders.html", reminders=reminders)
+
 
 if __name__ == "__main__":
     RESET_DB = 0  # Set to 1 to reset the database, keep as 0 to keep data
