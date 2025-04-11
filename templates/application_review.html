@@ -12,12 +12,15 @@
             <strong>Year In Program:</strong> {{ app.student_year }}<br>
             <strong>Student #:</strong> {{ app.student_number }}<br>
             <strong>Application Status:</strong> {{ app.status }}<br>
-            {% if app.status != "Accepted" %}
+            {% if app.status == "Under Review" %}
                 <form method="POST" action="{{ url_for('accept_application', app_id=app.id) }}">
                     <button type="submit">Accept</button>
                 </form>
+                <form method="POST" action="{{ url_for('reject_application', app_id=app.id) }}">
+                    <button type="submit">Reject</button>
+                </form>
             {% else %}
-                <p><em>Application already accepted.</em></p>
+                <p><em>Application decision has already been made.</em></p>
             {% endif %}
             <hr>
         </li>

@@ -603,6 +603,22 @@ def accept_application(app_id):
     flash(f"Application for {application.full_name} has been accepted.")
     return redirect(url_for("application_review"))
 
+@app.route("/reject_application/<int:app_id>", methods=["POST"])
+def reject_application(app_id):
+    if "user_id" not in session or session.get("role") != "coordinator":
+        flash("Access denied.")
+        return redirect(url_for("login"))
+
+    application = CoopApplication.query.get(app_id)
+    if not application:
+        flash("Application not found.")
+        return redirect(url_for("application_review"))
+
+    application.status = "Rejected"
+    db.session.commit()
+    flash(f"Application for {application.full_name} has been rejected.")
+    return redirect(url_for("application_review"))
+
 
 if __name__ == "__main__":
     RESET_DB = 0  # Set to 1 to reset the database, keep as 0 to keep data
