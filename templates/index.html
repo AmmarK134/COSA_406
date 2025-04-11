@@ -1,13 +1,38 @@
 {% extends 'base.html' %}
 {% block title %}Home{% endblock %}
 {% block content %}
-  <h2>Welcome to the COSA Application</h2>
-  <p>This system manages the co-op process for students, coordinators, and employers.</p>
-  <p>Please <a href="{{ url_for('login') }}">login</a> or register as one of the following:</p>
-  <ul>
-    <li><a href="{{ url_for('register', role='student') }}">Student</a></li>
-    <li><a href="{{ url_for('register', role='coordinator') }}">Co-op Coordinator</a></li>
-    <li><a href="{{ url_for('register', role='employer') }}">Employer</a></li>
-    <li><a href="{{ url_for('register', role='admin') }}">Admin</a></li>
-  </ul>
+<div class="container mt-5">
+
+  <div class="jumbotron text-center text-white py-5" style="background-color: #0056b3;">
+    <h1 class="display-4">Welcome to the COSA Application</h1>
+    <p class="lead">Streamlining the co-op process for students, coordinators, and employers.</p>
+    <hr class="my-4 bg-light">
+    <p>Manage your co-op journey with ease. Login or register to get started.</p>
+    <a href="{{ url_for('login') }}" class="btn btn-light btn-lg mx-2">Login</a>
+  </div>
+
+  <div id="register-section" class="mt-5">
+    <h2 class="text-center mb-4">Register as</h2>
+    <div class="row">
+      <div class="col-md-4 text-center">
+        <a href="{{ url_for('register', role='student') }}" class="btn btn-primary btn-block py-3">
+          <i class="fas fa-user-graduate fa-2x"></i><br>Student
+        </a>
+      </div>
+      <div class="col-md-4 text-center">
+        <a href="{{ url_for('register', role='coordinator') }}" class="btn btn-success btn-block py-3">
+          <i class="fas fa-user-tie fa-2x"></i><br>Co-op Coordinator
+        </a>
+      </div>
+      <div class="col-md-4 text-center">
+        <a href="{{ url_for('register', role='employer') }}" class="btn btn-warning btn-block py-3">
+          <i class="fas fa-building fa-2x"></i><br>Employer
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="text-center mt-4">
+    <p class="text-muted small">Admin access is restricted. <a href="{{ url_for('register', role='admin') }}" class="text-danger"><u>Register as Admin</u></a></p>
+  </div>
+</div>
 {% endblock %}

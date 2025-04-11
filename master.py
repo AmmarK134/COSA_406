@@ -593,7 +593,7 @@ def accept_application(app_id):
 
 
 if __name__ == "__main__":
-    RESET_DB = 0
+    RESET_DB = 0 # Set to 1 to reset the database (for development purposes)
     with app.app_context():
         if RESET_DB:
             db.drop_all()
