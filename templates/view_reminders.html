@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}View Reminders{% endblock %}
+{% block content %}
+<h2>Your Reminders</h2>
+
+{% if reminders %}
+  <ul>
+    {% for reminder in reminders %}
+      <li>{{ reminder.message }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p><strong>No reminders found.</strong></p>
+{% endif %}
+
+<a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+{% endblock %}
