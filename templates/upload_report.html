@@ -1,11 +1,22 @@
 {% extends 'base.html' %}
 {% block title %}Upload Work Term Report{% endblock %}
 {% block content %}
-<h1>Submit Your Work Term Report</h1>
-<form method="POST" enctype="multipart/form-data">
-    <label for="work_term_report">Choose a file to upload:</label>
-    <input type="file" id="work_term_report" name="file" accept="application/pdf" required>
-    <br><br>
-    <button type="submit">Submit</button>
-</form>
+<div id="submitBox">
+    <form method="POST" enctype="multipart/form-data">
+        <h1>Submit a valid file</h1>
+        <h4>All valid files will have the following extensions: pdf</h4>
+        
+        <label for="file">Choose file:</label>
+        <input type="file" name="file" id="file" accept="application/pdf"><br><br>
+
+        <label for="reportType">Select report type:</label>
+        <select name="reportType" id="reportType">
+            <option value="workterm">Work Term Report</option>
+            <option value="progress">Progress Report</option>
+            <option value="final">Final Report</option>
+        </select><br><br>
+
+        <input type="submit" name="submit" id="submit"><br><br>
+    </form>
+</div>
 {% endblock %}

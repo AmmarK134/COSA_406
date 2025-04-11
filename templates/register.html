@@ -14,7 +14,7 @@
     <input type="text" name="student_id" required><br>
     {% endif %}
     <label for="password">Password:</label>
-    <input type="password" name="password" required><br>
+    <input type="password" name="password" id="password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}" title="Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character." required><br>
     <label for="enable_2fa">Enable Two-Factor Authentication:</label>
     <input type="checkbox" name="enable_2fa"><br>
     <button type="submit">Register</button>

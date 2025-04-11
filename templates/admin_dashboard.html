@@ -2,12 +2,12 @@
 {% block title %}Admin Dashboard{% endblock %}
 {% block content %}
   <h2>Admin Dashboard</h2>
+  <a class="btn btn-secondary" href="{{ url_for('manage_user') }}">Manage Users</a>
   <h3>User Management</h3>
   <ul>
     {% for user in users %}
       <li>
         User ID: {{ user.id }}, Username: {{ user.username }}, Role: {{ user.role }}
-        <a href="#">Manage</a>
       </li>
     {% endfor %}
   </ul>
