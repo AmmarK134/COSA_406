@@ -2,4 +2,8 @@
 {% block title %}Check Application Status{% endblock %}
 {% block content %}
 <h2>Your Application Status</h2>
+<h1>Application Status</h1>
+<p><strong>Full Name:</strong> {{ application.full_name }}</p>
+<p><strong>Status:</strong> {{ application.status }}</p>
+<a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
 {% endblock %}

@@ -9,17 +9,21 @@ from io import BytesIO
 import base64
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cosa.db'
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config["SECRET_KEY"] = "your_secret_key_here"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///cosa.db"
+app.config["UPLOAD_FOLDER"] = os.path.join(os.getcwd(), "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 db = SQLAlchemy(app)
 
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "jpg", "jpeg", "png"}
 
-USER_ROLES = ['student', 'coordinator', 'employer', 'admin']
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+USER_ROLES = ["student", "coordinator", "employer", "admin"]
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,6 +40,7 @@ class User(db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -43,28 +48,23 @@ class User(db.Model):
         if not self.two_factor_secret:
             self.two_factor_secret = pyotp.random_base32()
         return self.two_factor_secret
-        
+
     def get_two_factor_uri(self):
         if not self.two_factor_secret:
             self.generate_two_factor_secret()
         totp = pyotp.TOTP(self.two_factor_secret)
         return totp.provisioning_uri(self.email, issuer_name="COSA")
-        
+
     def verify_two_factor(self, code):
         if not self.two_factor_secret:
             return False
         totp = pyotp.TOTP(self.two_factor_secret)
         return totp.verify(code)
 
-class Application(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(50), default='submitted')
-    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class JobPosting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    employer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     location = db.Column(db.String(200), nullable=False)
@@ -72,68 +72,64 @@ class JobPosting(db.Model):
     deadline = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Evaluation(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text)
-    pdf_filename = db.Column(db.String(200))
-    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
-    editable = db.Column(db.Boolean, default=True)
 
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     pdf_filename = db.Column(db.String(200))
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-class Interview(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    coordinator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    scheduled_time = db.Column(db.DateTime, nullable=False)
-    message = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CoopApplication(db.Model):
-    full_name = db.Column(db.Text)
-    address = db.Column(db.Text)
-    dob = db.Column(db.Text)
-    student_number = db.Column(db.Text, primary_key=True)
-    student_year = db.Column(db.Integer)
-    linkedin = db.Column(db.Text, nullable=False)
-    status = db.Column(db.Text, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.String(255), nullable=False)
+    dob = db.Column(db.Date, nullable=False)
+    student_number = db.Column(db.String(50), unique=True, nullable=False)
+    student_year = db.Column(db.Integer, nullable=False)
+    linkedin = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(50), default="Under Review")
 
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-    
-@app.route('/')
+    def update_status(self, new_status):
+        self.status = new_status
+        db.session.commit()
+
+
+if not os.path.exists(app.config["UPLOAD_FOLDER"]):
+    os.makedirs(app.config["UPLOAD_FOLDER"])
+
+
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/register/<role>', methods=['GET', 'POST'])
+
+@app.route("/register/<role>", methods=["GET", "POST"])
 def register(role):
     if role not in USER_ROLES:
         flash("Invalid role specified.")
-        return redirect(url_for('index'))
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        name = request.form.get('name', '')
-        student_id_val = request.form.get('student_id', None) if role == 'student' else None
-        password = request.form['password']
-        enable_2fa = request.form.get('enable_2fa') == 'on'
-        if User.query.filter((User.username == username) | (User.email == email)).first():
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        name = request.form.get("name", "")
+        student_id_val = (
+            request.form.get("student_id", None) if role == "student" else None
+        )
+        password = request.form["password"]
+        enable_2fa = request.form.get("enable_2fa") == "on"
+        if User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first():
             flash("User with that username or email already exists.")
-            return redirect(url_for('register', role=role))
-        user = User(username=username, email=email, name=name, role=role, student_id=student_id_val)
+            return redirect(url_for("register", role=role))
+        user = User(
+            username=username,
+            email=email,
+            name=name,
+            role=role,
+            student_id=student_id_val,
+        )
         user.set_password(password)
         user.two_factor_enabled = enable_2fa
         if enable_2fa:
@@ -142,271 +138,384 @@ def register(role):
         db.session.add(user)
         db.session.commit()
         flash("Registration successful. Please login.")
-        return redirect(url_for('login'))
-    return render_template('register.html', role=role)
+        return redirect(url_for("login"))
+    return render_template("register.html", role=role)
 
-@app.route('/login', methods=['GET', 'POST'])
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        username_or_email = request.form['username']
-        password = request.form['password']
-        user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
+    if request.method == "POST":
+        username_or_email = request.form["username"]
+        password = request.form["password"]
+        user = User.query.filter(
+            (User.username == username_or_email) | (User.email == username_or_email)
+        ).first()
         if user and user.check_password(password):
-            session['temp_user_id'] = user.id
+            session["temp_user_id"] = user.id
             if not user.two_factor_enabled:
-                return redirect(url_for('two_factor'))
-            return redirect(url_for('two_factor'))
+                return redirect(url_for("two_factor"))
+            return redirect(url_for("two_factor"))
         else:
             flash("Invalid credentials. Please try again.")
-    return render_template('login.html')
+    return render_template("login.html")
 
-@app.route('/two_factor', methods=['GET', 'POST'])
+
+@app.route("/two_factor", methods=["GET", "POST"])
 def two_factor():
-    if 'temp_user_id' not in session:
+    if "temp_user_id" not in session:
         flash("Session expired. Please login again.")
-        return redirect(url_for('login'))
-    
-    user = User.query.get(session['temp_user_id'])
+        return redirect(url_for("login"))
+
+    user = User.query.get(session["temp_user_id"])
     if not user:
         flash("User not found.")
-        return redirect(url_for('login'))
-    
+        return redirect(url_for("login"))
+
     if not user.two_factor_enabled:
-        session.pop('temp_user_id', None)
-        session['user_id'] = user.id
-        session['role'] = user.role
-        session['username'] = user.username
+        session.pop("temp_user_id", None)
+        session["user_id"] = user.id
+        session["role"] = user.role
+        session["username"] = user.username
         flash("Two-factor authentication is disabled. Logged in without verification.")
-        return redirect(url_for('dashboard'))
-    
+        return redirect(url_for("dashboard"))
+
     if not user.two_factor_initiated:
-   
+
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(user.get_two_factor_uri())
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
-        
+
         buffered = BytesIO()
         img.save(buffered, format="PNG")
         qr_code = base64.b64encode(buffered.getvalue()).decode()
-        
-        if request.method == 'POST':
-            code = request.form.get('code')
+
+        if request.method == "POST":
+            code = request.form.get("code")
             if user.verify_two_factor(code):
-                user.two_factor_initiated = True  # Mark the setup complete
+                user.two_factor_initiated = True
                 db.session.commit()
-                session.pop('temp_user_id', None)
-                session['user_id'] = user.id
-                session['role'] = user.role
-                session['username'] = user.username
+                session.pop("temp_user_id", None)
+                session["user_id"] = user.id
+                session["role"] = user.role
+                session["username"] = user.username
                 flash("Two-factor authentication setup and verification successful.")
-                return redirect(url_for('dashboard'))
+                return redirect(url_for("dashboard"))
             else:
                 flash("Invalid verification code. Please try again.")
-        return render_template('2fa.html', qr_code=qr_code, setup_mode=True)
-    
-    # For users who have already completed 2FA setup.
-    if request.method == 'POST':
-        code = request.form.get('code')
+        return render_template("2fa.html", qr_code=qr_code, setup_mode=True)
+
+    if request.method == "POST":
+        code = request.form.get("code")
         if user.verify_two_factor(code):
-            session.pop('temp_user_id', None)
-            session['user_id'] = user.id
-            session['role'] = user.role
-            session['username'] = user.username
+            session.pop("temp_user_id", None)
+            session["user_id"] = user.id
+            session["role"] = user.role
+            session["username"] = user.username
             flash("Two-factor authentication successful.")
-            return redirect(url_for('dashboard'))
+            return redirect(url_for("dashboard"))
         else:
             flash("Invalid verification code.")
-            return redirect(url_for('two_factor'))
-    
-    return render_template('2fa.html', setup_mode=False)
+            return redirect(url_for("two_factor"))
 
-@app.route('/logout')
+    return render_template("2fa.html", setup_mode=False)
+
+
+@app.route("/logout")
 def logout():
     session.clear()
     flash("Logged out successfully.")
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
-@app.route('/dashboard')
+
+@app.route("/dashboard")
 def dashboard():
-    if 'user_id' not in session:
+    if "user_id" not in session:
         flash("Please login first.")
-        return redirect(url_for('login'))
-    role = session.get('role')
-    if role == 'student':
-        return redirect(url_for('student_dashboard'))
-    elif role == 'coordinator':
-        return redirect(url_for('coordinator_dashboard'))
-    elif role == 'employer':
-        return redirect(url_for('employer_dashboard'))
-    elif role == 'admin':
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for("login"))
+    role = session.get("role")
+    if role == "student":
+        return redirect(url_for("student_dashboard"))
+    elif role == "coordinator":
+        return redirect(url_for("coordinator_dashboard"))
+    elif role == "employer":
+        return redirect(url_for("employer_dashboard"))
+    elif role == "admin":
+        return redirect(url_for("admin_dashboard"))
     else:
         flash("Invalid user role.")
-        return redirect(url_for('index'))
+        return redirect(url_for("index"))
 
-@app.route('/dashboard/student')
+
+@app.route("/dashboard/student")
 def student_dashboard():
     return render_template("student_dashboard.html")
 
-@app.route('/dashboard/coordinator')
+
+@app.route("/dashboard/coordinator")
 def coordinator_dashboard():
-    applications = Application.query.all()
-    return render_template('coordinator_dashboard.html', applications=applications)
+    return render_template("coordinator_dashboard.html")
 
-@app.route('/dashboard/employer')
+
+@app.route("/dashboard/employer")
 def employer_dashboard():
-    job_postings = JobPosting.query.filter_by(employer_id=session.get('user_id')).all()
-    return render_template('employer_dashboard.html', job_postings=job_postings)
+    job_postings = JobPosting.query.filter_by(employer_id=session.get("user_id")).all()
+    return render_template("employer_dashboard.html", job_postings=job_postings)
 
-@app.route('/dashboard/admin')
+
+@app.route("/dashboard/admin")
 def admin_dashboard():
     users = User.query.all()
-    return render_template('admin_dashboard.html', users=users)
+    return render_template("admin_dashboard.html", users=users)
 
 
-@app.route('/faq')
+@app.route("/faq")
 def faq():
-    return render_template('faq.html')
+    return render_template("faq.html")
 
 
-@app.route('/add_job', methods=['GET', 'POST'])
+@app.route("/add_job", methods=["GET", "POST"])
 def add_job():
-    if 'user_id' not in session or session.get('role') != 'employer':
+    if "user_id" not in session or session.get("role") != "employer":
         flash("Access denied.")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        title = request.form.get('job_title')
-        description = request.form.get('job_description')
-        location = request.form.get('job_location')
-        job_type = request.form.get('job_type')
-        deadline_str = request.form.get('application_deadline')
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        title = request.form.get("job_title")
+        description = request.form.get("job_description")
+        location = request.form.get("job_location")
+        job_type = request.form.get("job_type")
+        deadline_str = request.form.get("application_deadline")
         try:
-            deadline = datetime.strptime(deadline_str, '%Y-%m-%d')
+            deadline = datetime.strptime(deadline_str, "%Y-%m-%d")
         except ValueError:
             flash("Invalid deadline format. Please use YYYY-MM-DD.")
             return redirect(request.url)
         job = JobPosting(
-            employer_id=session['user_id'],
+            employer_id=session["user_id"],
             title=title,
             description=description,
             location=location,
             job_type=job_type,
-            deadline=deadline
+            deadline=deadline,
         )
         db.session.add(job)
         db.session.commit()
         flash("Job posting added successfully.")
-        return redirect(url_for('employer_dashboard'))
-    return render_template('add_job.html')
-        
-@app.route('/upload_report', methods=['GET', 'POST'])
+        return redirect(url_for("employer_dashboard"))
+    return render_template("add_job.html")
+
+
+@app.route("/upload_report", methods=["GET", "POST"])
 def upload_report():
-    if 'user_id' not in session or session.get('role') != 'student':
+    if "user_id" not in session or session.get("role") != "student":
         flash("Access denied.")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        if 'file' not in request.files:
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        if "file" not in request.files:
             flash("No file found.")
             return redirect(request.url)
-        file = request.files['file']
-        if file.filename == '':
+        file = request.files["file"]
+        if file.filename == "":
             flash("No file selected.")
             return redirect(request.url)
-        if file and file.filename.lower().endswith('.pdf'):
+        if file and file.filename.lower().endswith(".pdf"):
             filename = file.filename
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
-            report = Report(student_id=session['user_id'], pdf_filename=filename)
+            report = Report(student_id=session["user_id"], pdf_filename=filename)
             db.session.add(report)
             db.session.commit()
             flash("Work term report uploaded successfully.")
-            return redirect(url_for('student_dashboard'))
+            return redirect(url_for("student_dashboard"))
         else:
             flash("Only PDF files are allowed for reports.")
             return redirect(request.url)
-    return render_template('upload_report.html')
+    return render_template("upload_report.html")
 
-@app.route('/document_portal', methods=['GET', 'POST'])
+
+@app.route("/document_portal", methods=["GET", "POST"])
 def document_portal():
-    if 'user_id' not in session:
+    if "user_id" not in session:
         flash("Please login first.")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        if 'document' not in request.files:
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        if "document" not in request.files:
             flash("No file part.")
             return redirect(request.url)
-        file = request.files['document']
-        if file.filename == '':
+        file = request.files["document"]
+        if file.filename == "":
             flash("No file selected.")
             return redirect(request.url)
         if file and allowed_file(file.filename):
-            ext = file.filename.rsplit('.', 1)[1].lower()
-            unique_filename = f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            unique_filename = (
+                f"{session['user_id']}_{datetime.utcnow().timestamp()}.{ext}"
+            )
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
             file.save(filepath)
             flash("Document uploaded successfully.")
-            return redirect(url_for('dashboard'))
+            return redirect(url_for("dashboard"))
         else:
             flash("Invalid file type.")
             return redirect(request.url)
-    return render_template('document_portal.html')
+    return render_template("document_portal.html")
 
-@app.route('/application_status', methods=['GET', 'POST'])
+
+@app.route("/application_status", methods=["GET"])
 def application_status():
-    return render_template('application_status.html')
+    if "user_id" not in session or session.get("role") != "student":
+        flash("Access denied.")
+        return redirect(url_for("login"))
 
-@app.route('/submit_application', methods=['GET', 'POST'])
+    user = User.query.get(session["user_id"])
+    if not user or not user.name:
+        flash("No student name found for the logged-in user.")
+        return redirect(url_for("dashboard"))
+
+    application = CoopApplication.query.filter_by(full_name=user.name).first()
+    if not application:
+        flash("No application found.")
+        return redirect(url_for("dashboard"))
+
+    return render_template("application_status.html", application=application)
+
+
+@app.route("/submit_application", methods=["GET", "POST"])
 def submit_application():
-    if request.method == 'POST':
-        fullname = request.form.get('fullname')
-        address_line1 = request.form.get('addressline1')
-        address_line2 = request.form.get('addressline2')
-        dob = request.form.get('dob')
-        studentnum = request.form.get('studentnum')
-        studentyear = request.form.get('level')
-        linkedin = request.form.get('linkedin')
-        if any(list(filter(lambda x: not x.isalpha(), [fullname, address_line1, address_line2, dob, studentnum, studentyear]))):
-            flash('One or more fields are missing required responses')
-            return redirect(url_for('submit_application'))
+    if "user_id" not in session or session.get("role") != "student":
+        flash("Access denied.")
+        return redirect(url_for("login"))
+
+    user = User.query.get(session["user_id"])
+    full_name = user.name if user else ""
+
+    if request.method == "POST":
+        fullname = request.form.get("fullname")
+        address_line1 = request.form.get("addressline1")
+        address_line2 = request.form.get("addressline2")
+        dob_str = request.form.get("dob")
+        student_num = request.form.get("studentnum")
+        student_year = request.form.get("level")
+        linkedin = request.form.get("linkedin")
+
+        if not all(
+            [
+                fullname,
+                address_line1,
+                address_line2,
+                dob_str,
+                student_num,
+                student_year,
+                linkedin,
+            ]
+        ):
+            flash("Please fill in all required fields.")
+            return render_template(
+                "submit_application.html", form=request.form, full_name=full_name
+            )
+
+        try:
+            dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.")
+            return render_template(
+                "submit_application.html", form=request.form, full_name=full_name
+            )
+
         application = CoopApplication(
-            fullname=fullname,
+            full_name=fullname,
             address="{} {}".format(address_line1, address_line2),
             dob=dob,
-            student_number=studentnum,
-            student_year=studentyear,
+            student_number=student_num,
+            student_year=student_year,
             linkedin=linkedin,
-            status="Under Review"
+            status="Under Review",
         )
         db.session.add(application)
         db.session.commit()
-    return render_template('submit_application.html')
+        flash("Application submitted successfully.")
+        return redirect(url_for("dashboard"))
 
-@app.route('/application_review', methods=['GET', 'POST'])
+    return render_template("submit_application.html", form={}, full_name=full_name)
+
+
+@app.route("/application_review", methods=["GET", "POST"])
 def application_review():
-    if request.method == 'POST':
-        applicant_data = CoopApplication.query.all()
-        return render_template('application_review.html')
+    if "user_id" not in session or session.get("role") != "coordinator":
+        flash("Access denied.")
+        return redirect(url_for("login"))
 
-if __name__ == '__main__':
+    applications = CoopApplication.query.all()
+
+    if request.method == "POST":
+        search_name = request.form.get("name")
+        search_email = request.form.get("email")
+        search_id = request.form.get("id")
+
+        if search_name:
+            applications = [
+                app
+                for app in applications
+                if search_name.lower() in app.full_name.lower()
+            ]
+        if search_email:
+            applications = [
+                app
+                for app in applications
+                if search_email.lower() in app.linkedin.lower()
+            ]
+        if search_id:
+            applications = [
+                app for app in applications if search_id == app.student_number
+            ]
+
+    return render_template("application_review.html", applications=applications)
+
+
+@app.route("/accept_application/<int:app_id>", methods=["POST"])
+def accept_application(app_id):
+    if "user_id" not in session or session.get("role") != "coordinator":
+        flash("Access denied.")
+        return redirect(url_for("login"))
+
+    application = CoopApplication.query.get(app_id)
+    if not application:
+        flash("Application not found.")
+        return redirect(url_for("application_review"))
+
+    application.status = "Accepted"
+    db.session.commit()
+    flash(f"Application for {application.full_name} has been accepted.")
+    return redirect(url_for("application_review"))
+
+
+if __name__ == "__main__":
+    RESET_DB = 0
     with app.app_context():
-        db.drop_all()
-        db.create_all()
-        
-        default_password = "password"
-        
-        default_users = [
-            ('student', 'student', 'student@example.com', 'Student Name'),
-            ('coordinator', 'coordinator', 'coordinator@example.com', 'Coordinator Name'),
-            ('employer', 'employer', 'employer@example.com', 'Employer Name'),
-            ('admin', 'admin', 'admin@example.com', 'Admin Name')
-        ]
-        
-        for role, username, email, name in default_users:
-            user = User(role=role, username=username, email=email, name=name)
-            user.set_password(default_password)
-            user.two_factor_enabled = False
-            db.session.add(user)
-        
-        db.session.commit()
+        if RESET_DB:
+            db.drop_all()
+            db.create_all()
+
+            default_password = "password"
+
+            default_users = [
+                ("student", "student", "student@example.com", "Student Name"),
+                (
+                    "coordinator",
+                    "coordinator",
+                    "coordinator@example.com",
+                    "Coordinator Name",
+                ),
+                ("employer", "employer", "employer@example.com", "Employer Name"),
+                ("admin", "admin", "admin@example.com", "Admin Name"),
+            ]
+
+            for role, username, email, name in default_users:
+                user = User(role=role, username=username, email=email, name=name)
+                user.set_password(default_password)
+                user.two_factor_enabled = False
+                db.session.add(user)
+
+            db.session.commit()
+
     app.run(debug=True)

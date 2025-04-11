@@ -2,18 +2,28 @@
 {% block title %}Review Applications{% endblock %}
 {% block content %}
 <h2>Review Student Applications</h2>
-<form method="POST" enctype="text/plain">
-    <label for="name">Enter student name: </label><br><br>
-    <input type="text" name="name" id="name"><br><br>
-    <label for="email">Enter student email: </label><br><br>
-    <input type="text" name="email" id="email"><br><br>
-    <label for="id">Enter student ID: </label><br><br>
-    <input type="text" name="id" id="id"><br><br>
-</form>
-<ul>
-    <li>Name: {{ data.fullname }}</li><br>
-    <li>Year In Program: {{ data.student_year }}</li><br>
-    <li>Student #: {{ data.student_number }}</li><br>
-    <li>Application Status: {{ data.status }}</li><br>
-</ul>
+
+<h3>Applications</h3>
+{% if applications %}
+    <ul>
+    {% for app in applications %}
+        <li>
+            <strong>Name:</strong> {{ app.full_name }}<br>
+            <strong>Year In Program:</strong> {{ app.student_year }}<br>
+            <strong>Student #:</strong> {{ app.student_number }}<br>
+            <strong>Application Status:</strong> {{ app.status }}<br>
+            {% if app.status != "Accepted" %}
+                <form method="POST" action="{{ url_for('accept_application', app_id=app.id) }}">
+                    <button type="submit">Accept</button>
+                </form>
+            {% else %}
+                <p><em>Application already accepted.</em></p>
+            {% endif %}
+            <hr>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No applications found.</p>
+{% endif %}
 {% endblock %}
