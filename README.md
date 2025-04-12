@@ -82,10 +82,11 @@ Before running the code, please ensure you have installed the following:
 
 Once you have Python installed, all you need to do is run the following commands on your terminal:
 
+```
 git clone https://github.com/AmmarK134/COSA_406.git
 pip install -r requirements.txt
 python master.py
-
+```
 
 ### `requirements.txt` includes the following modules:
 - Flask: `pip install Flask`  
