@@ -1,9 +1,7 @@
 
 # Co-op Support Application (COSA)
 
-Team 100 – CPS406 | Instructor: Vojislav Misic  
-
-## Iteration 2 - Working on COSA
+## Team 100 - Sprint 3
 
 ## Team Members
 - Cynthujan Harichankar - 501233073  
