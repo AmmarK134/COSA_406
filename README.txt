@@ -4,6 +4,29 @@
 ## Team 100 - Sprint 3
 
 
+## Project Description
+The Co-op Support Application (COSA) is a web-based platform designed to streamline the co-op process for students, coordinators, employers, and administrators. It provides a system for managing co-op applications, job postings, and work term reports, ensuring a seamless experience for everyone.
+
+
+### Key Features:
+- **Students**:
+  - Submit and track co-op applications.
+  - Upload work term reports.
+  - View reminders and notifications.
+
+- **Coordinators**:
+  - Review and manage student applications.
+  - Accept or reject applications.
+
+- **Employers**:
+  - Post job opportunities.
+  - Manage job postings.
+
+- **Administrators**:
+  - Manage user accounts (activate, deactivate, edit roles).
+  - Oversee the entire system.
+
+
 ## Team Members
 - Cynthujan Harichankar - 501233073  
 - Suhail Moeen - 501230062  
@@ -69,4 +92,4 @@ python master.py
 - Requests: `pip install requests`  
 - SQLAlchemy: `pip install SQLAlchemy`  
 - pyotp: `pip install pyotp`  
-- qrcode: `pip install qrcode`  
+- qrcode: `pip install qrcode`
