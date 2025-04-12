@@ -1,7 +1,8 @@
-
 # Co-op Support Application (COSA)
 
+
 ## Team 100 - Sprint 3
+
 
 ## Team Members
 - Cynthujan Harichankar - 501233073  
@@ -11,11 +12,8 @@
 - Ammar Kashif - 501242212  
 - Samiya Abdirahim - 501102187  
 
----
 
 ## Project Structure
-
-```
 /COSA_406             -- Project root folder  
 │
 ├── instance/  
@@ -52,9 +50,7 @@
 ├── master.py          -- Main Flask application file  
 ├── README.md          -- GitHub Markdown version of project description  
 └── requirements.txt   -- Python dependencies for running the app  
-```
 
----
 
 ## Setup Instructions
 
@@ -64,11 +60,10 @@ Before running the code, please ensure you have installed the following:
 
 Once you have Python installed, all you need to do is run the following commands on your terminal:
 
-```bash
 git clone https://github.com/AmmarK134/COSA_406.git
 pip install -r requirements.txt
 python master.py
-```
+
 
 ### `requirements.txt` includes the following modules:
 - Flask: `pip install Flask`  
