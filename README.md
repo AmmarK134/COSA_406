@@ -19,8 +19,7 @@
 ├── instance/  
 │   └── cosa.db        -- SQL database for the application  
 │
-├── static/  
-│   ├── images/        -- Project image assets  
+├── static/   
 │   ├── script.js      -- JavaScript file  
 │   └── styles.css     -- CSS styles  
 │
